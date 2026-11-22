@@ -1,0 +1,15 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Teste dos arquivos</title></head>
+<body style="font:17px/1.5 sans-serif;padding:16px"><h2>Teste dos arquivos</h2><div id="o">Testando...</div>
+<script>
+const A=['index.html','loja.html','comprador.html','dono.html','style.css','comum.js','firebase-config.js','logo.png'];
+(async()=>{let h='';
+for(const f of A){try{const r=await fetch(f+'?t='+Date.now());h+=`<p>${r.ok?'✅':'❌ FALTA'} ${f} (${r.status})</p>`;
+ if(r.ok&&f=='firebase-config.js'){const t=await r.text();
+  if(!/export\s+const\s+firebaseConfig/.test(t))h+='<p>⚠️ firebase-config.js não tem "export const firebaseConfig"</p>';
+  if(/COLE_AQUI/.test(t))h+='<p>⚠️ firebase-config.js ainda tem COLE_AQUI</p>';
+  if(/^\s*import\s/m.test(t))h+='<p>⚠️ firebase-config.js tem linha "import": apague</p>'}
+ if(r.ok&&f=='comum.js'&&/firebase-auth/.test(await r.text()))h+='<p>⚠️ comum.js é a versão ANTIGA (com login): suba o novo</p>';
+}catch(e){h+=`<p>❌ ${f}: ${e.message}</p>`}}
+try{await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');h+='<p>✅ Firebase carrega</p>'}catch(e){h+='<p>❌ Firebase não carrega: '+e.message+'</p>'}
+document.getElementById('o').innerHTML=h})()
+</script></body></html>
