@@ -1,0 +1,75 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Comprador • Estoque</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="style.css">
+<script>(function(){function m(t){var d=document.getElementById("erro");if(!d){d=document.createElement("div");d.id="erro";d.style.cssText="position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#b00020;color:#fff;padding:12px;border-radius:12px;font:14px sans-serif";document.body.appendChild(d)}d.textContent="Erro: "+t}
+addEventListener("error",function(e){m(e.message||("não carregou "+(e.target&&(e.target.src||e.target.href))))},true);addEventListener("unhandledrejection",function(e){m((e.reason&&e.reason.message)||e.reason)})})()</script></head>
+<body class="compra">
+<header><img src="logo.png" alt=""><h1>Painel do Comprador<br><small id="dt" style="color:#fffc"></small></h1><a id="nav" class="hide" href="loja.html">Loja</a><button id="out">Menu</button></header>
+<main><div class="tabs" id="tabs"></div>
+<section id="sug"></section><section id="est" class="hide"></section>
+<section id="comp" class="hide"><h2>Registrar compra</h2><div class="card">
+<select id="ci"></select>
+<div class="row"><input id="cq" type="number" inputmode="decimal" step="any" placeholder="Quantidade comprada"><input id="cv" type="number" inputmode="decimal" step="any" placeholder="Valor total R$"></div>
+<input id="cf" placeholder="Fornecedor">
+<select id="cl"><option value="5">Qualidade: ótima</option><option value="4">Qualidade: boa</option><option value="3">Qualidade: regular</option><option value="2">Qualidade: ruim</option><option value="1">Qualidade: péssima</option></select>
+<input id="cd" type="date" title="Validade"><small>Validade do que chegou (se for perecível)</small>
+<input id="co" placeholder="Observação (opcional)">
+<button class="b" id="cb">Registrar e atualizar estoque</button></div>
+<h2>Últimas compras</h2><div id="hist"></div></section>
+<section id="item" class="hide"><h2>Cadastrar item</h2><div class="card">
+<input id="nn" placeholder="Nome do item">
+<div class="row"><select id="nc"><option value="adicional">Adicional</option><option value="base">Açaí / base</option><option value="embalagem">Embalagem</option><option value="outro">Outro</option></select><select id="nu"><option>g</option><option>un</option><option>ml</option></select></div>
+<input id="nm" type="number" inputmode="decimal" step="any" placeholder="Estoque mínimo (aviso crítico)">
+<label><input id="np" type="checkbox" style="width:auto"> Perecível (pedir validade)</label>
+<button class="b" id="na">Adicionar item</button></div>
+<button class="b" id="seed" style="background:var(--a);color:var(--ink)">Carregar itens padrão da açaíteria</button>
+<small>Pesos em gramas (g) e embalagens em unidades (un). Ajuste o mínimo de cada item depois.</small></section>
+<section id="giro" class="hide"></section></main>
+<script type="module">
+import {db,guard,sair,hoje,diasAte,esc,dBR,itens,$,collection,doc,getDocs,updateDoc,deleteDoc,writeBatch,query,orderBy,limit,serverTimestamp} from "./comum.js";
+let L=[];
+const st=i=>i.estoque<=i.minimo?['Crítico','bad']:i.estoque<=i.minimo*1.5?['Baixo','warn']:['OK','ok'];
+const dias=i=>i.consumoMedio>0?i.estoque/i.consumoMedio:null;
+const sugest=i=>Math.max(0,Math.ceil(Math.max(i.minimo*3,(i.consumoMedio||0)*7)-i.estoque));
+const venc=i=>i.validade&&i.estoque>0?diasAte(i.validade):null;
+const ABAS=[['sug','Compras'],['est','Estoque'],['comp','Registrar compra'],['item','Itens'],['giro','Giro semanal']];
+$('out').onclick=sair;$('dt').textContent=dBR(hoje());
+function aba(n){document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!=n));[...$('tabs').children].forEach((b,k)=>b.classList.toggle('on',ABAS[k][0]==n));scrollTo(0,0)}
+$('tabs').innerHTML=ABAS.map(a=>`<button onclick="aba('${a[0]}')">${a[1]}</button>`).join('');window.aba=aba;
+guard(['comprador','dono'],async(u,p)=>{if(p=='dono')$('nav').classList.remove('hide');await carregar();aba('sug')});
+async function carregar(){L=await itens();
+ $('ci').innerHTML=L.map(i=>`<option value="${i.id}">${esc(i.nome)} (${i.unidade})</option>`).join('');
+ rSug();rEst();rHist();rGiro()}
+function rSug(){
+ const cr=L.filter(i=>st(i)[0]=='Crítico').length,vc=L.filter(i=>venc(i)!==null&&venc(i)<=3);
+ const c=L.filter(i=>st(i)[1]!='ok'||(dias(i)!==null&&dias(i)<=3)).sort((a,b)=>(dias(a)??99)-(dias(b)??99));
+ let h=`<div class="row"><div class="card"><b style="font-size:1.6rem">${cr}</b><br><small>itens críticos</small></div><div class="card"><b style="font-size:1.6rem">${vc.length}</b><br><small>vencendo em até 3 dias</small></div></div><h2>Sugestão de compra</h2>`;
+ h+=c.length?c.map(i=>{const d=dias(i),s=sugest(i);return `<div class="card"><span class="tag ${st(i)[1]}">${st(i)[0]}</span><b>${esc(i.nome)}</b><br>Tem ${Math.round(i.estoque)} ${i.unidade}${d!==null?` • dura ~${d.toFixed(1)} dia(s)`:''}<br>Sugestão: comprar <b>${s} ${i.unidade}</b> (cobre cerca de 7 dias)<br><button class="s" onclick="comprar('${i.id}',${s})">Vou comprar</button></div>`}).join(''):'<div class="card">Tudo em dia. Nenhum item pede compra agora.</div>';
+ if(vc.length)h+='<h2>Vencendo em breve</h2>'+vc.map(i=>`<div class="card"><span class="tag bad">${diasAte(i.validade)<0?'vencido':diasAte(i.validade)+' dia(s)'}</span><b>${esc(i.nome)}</b><br><small>Validade ${dBR(i.validade)} • ideal criar promoção</small></div>`).join('');
+ $('sug').innerHTML=h}
+function rEst(){$('est').innerHTML=L.length?L.map(i=>`<div class="card"><span class="tag ${st(i)[1]}">${st(i)[0]}</span><b>${esc(i.nome)}</b><br>${Math.round(i.estoque)} ${i.unidade} <small>(mínimo ${i.minimo})</small>${i.validade?`<br><small>Validade ${dBR(i.validade)}</small>`:''}<br><button class="s" onclick="minimo('${i.id}')">Mudar mínimo</button><button class="s" onclick="excluir('${i.id}')">Excluir</button></div>`).join(''):'<div class="card">Nenhum item. Vá em Itens e carregue os itens padrão.</div>'}
+async function rHist(){const d=(await getDocs(query(collection(db,'compras'),orderBy('criadoEm','desc'),limit(15)))).docs.map(x=>x.data());
+ $('hist').innerHTML=d.length?d.map(c=>`<div class="card"><b>${esc(c.nome)}</b> — ${c.qtd} ${c.unidade}<br><small>${dBR(c.data)} • ${'★'.repeat(c.qualidade)}${'☆'.repeat(5-c.qualidade)} • ${esc(c.fornecedor)} ${c.valor?'• R$ '+c.valor.toFixed(2):''}</small>${c.obs?`<br><small>${esc(c.obs)}</small>`:''}</div>`).join(''):'<div class="card">Nenhuma compra registrada ainda.</div>'}
+async function rGiro(){
+ const g=(await getDocs(query(collection(db,'giro'),orderBy('data','desc'),limit(2)))).docs.map(d=>d.data());
+ if(!g.length)return $('giro').innerHTML='<div class="card">Ainda sem dados. A loja registra o total toda segunda-feira, no fechamento.</div>';
+ const [a,b]=g,cs=(await getDocs(query(collection(db,'compras'),orderBy('criadoEm','desc'),limit(300)))).docs.map(d=>d.data());
+ let h=`<h2>Giro: ${b?dBR(b.data)+' → ':''}${dBR(a.data)}</h2>`;
+ for(const i of L){const n=a.totais[i.id];if(n===undefined)continue;
+  if(!b||b.totais[i.id]===undefined){h+=`<div class="card"><b>${esc(i.nome)}</b><br>Total: ${n} ${i.unidade}</div>`;continue}
+  const p=b.totais[i.id],cp=cs.filter(c=>c.itemId==i.id&&c.data>b.data&&c.data<=a.data).reduce((s,c)=>s+c.qtd,0);
+  h+=`<div class="card"><b>${esc(i.nome)}</b><br>Antes ${p} → agora ${n} ${i.unidade}<br><small>Comprado: ${cp} • Consumo estimado: ${p+cp-n} ${i.unidade}</small></div>`}
+ $('giro').innerHTML=h+'<small>Consumo estimado = estoque anterior + compras − estoque atual.</small>'}
+window.comprar=(id,q)=>{aba('comp');$('ci').value=id;$('cq').value=q};
+window.minimo=async id=>{const i=L.find(x=>x.id==id),v=prompt('Novo estoque mínimo ('+i.unidade+'):',i.minimo);if(v===null||isNaN(+v)||v==='')return;await updateDoc(doc(db,'itens',id),{minimo:+v});location.reload()};
+window.excluir=async id=>{if(!confirm('Excluir este item?'))return;await deleteDoc(doc(db,'itens',id));location.reload()};
+$('cb').onclick=async()=>{const i=L.find(x=>x.id==$('ci').value),q=+$('cq').value;if(!i||!(q>0))return alert('Escolha o item e a quantidade.');
+ const nv=$('cd').value,v=nv&&(!i.validade||nv<i.validade)?nv:(i.validade||''),b=writeBatch(db);
+ b.set(doc(collection(db,'compras')),{data:hoje(),itemId:i.id,nome:i.nome,qtd:q,unidade:i.unidade,valor:+$('cv').value||0,fornecedor:$('cf').value,qualidade:+$('cl').value,validade:nv,obs:$('co').value,criadoEm:serverTimestamp()});
+ b.update(doc(db,'itens',i.id),{estoque:i.estoque+q,validade:v,atualizadoEm:serverTimestamp()});
+ try{await b.commit();alert('Compra registrada e estoque atualizado ✔');location.reload()}catch(e){alert('Não salvou: '+e.message)}};
+const novo=(n,c,u,m,p)=>({nome:n,categoria:c,unidade:u,minimo:+m,perecivel:!!+p,estoque:0,validade:'',consumoMedio:0,ultimoFechamento:'',atualizadoEm:serverTimestamp()});
+$('na').onclick=async()=>{if(!$('nn').value.trim()||$('nm').value==='')return alert('Informe o nome e o estoque mínimo.');
+ const b=writeBatch(db);b.set(doc(collection(db,'itens')),novo($('nn').value.trim(),$('nc').value,$('nu').value,$('nm').value,$('np').checked?1:0));await b.commit();location.reload()};
+const SEED="Granola|adicional|g|1000|0;Leite em pó|adicional|g|1000|0;Leite condensado|adicional|g|1000|0;Paçoca|adicional|g|500|0;Chocoball|adicional|g|500|0;Confete|adicional|g|500|0;Calda de chocolate|adicional|g|500|0;Creme de ninho|adicional|g|500|0;Banana|adicional|g|2000|1;Morango|adicional|g|2000|1;Açaí (base)|base|g|20000|1;Copo 300ml|embalagem|un|100|0;Copo 500ml|embalagem|un|100|0;Marmita 700ml|embalagem|un|100|0;Colher|embalagem|un|200|0;Sacola delivery|embalagem|un|100|0";
+$('seed').onclick=async()=>{if(!confirm('Adicionar os itens padrão que ainda não existem?'))return;const b=writeBatch(db);
+ SEED.split(';').map(x=>x.split('|')).filter(x=>!L.some(i=>i.nome==x[0])).forEach(x=>b.set(doc(collection(db,'itens')),novo(...x)));await b.commit();location.reload()};
+</script></body></html>

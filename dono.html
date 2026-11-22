@@ -1,0 +1,20 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dono • Estoque</title>
+<link rel="stylesheet" href="style.css"></head>
+<body style="--p:#8a5a00;--p2:#F5A300;--a:#6B2C91;--bg:#FFF3C9">
+<header><img src="logo.png" alt=""><h1>Painel do Dono<br><small id="dt"></small></h1><a href="index.html">Menu</a></header>
+<main id="r"><div class="card">Carregando...</div></main>
+<script type="module">
+import {db,hoje,diasAte,esc,dBR,itens,$,collection,getDocs,query,orderBy,limit} from "./comum.js";
+$('dt').textContent=dBR(hoje());
+const L=await itens(),st=i=>i.estoque<=i.minimo?'bad':i.estoque<=i.minimo*1.5?'warn':'ok';
+const cr=L.filter(i=>st(i)=='bad'),ba=L.filter(i=>st(i)=='warn'),vc=L.filter(i=>i.validade&&i.estoque>0&&diasAte(i.validade)<=3);
+const f=(await getDocs(query(collection(db,'fechamentos'),orderBy('data','desc'),limit(1)))).docs[0]?.data();
+const cp=(await getDocs(query(collection(db,'compras'),orderBy('criadoEm','desc'),limit(5)))).docs.map(d=>d.data());
+const lst=(a,t,fn)=>a.length?`<h2>${t}</h2>`+a.map(fn).join(''):'';
+$('r').innerHTML=`<div class="row"><div class="card"><b class="n">${cr.length}</b><br><small>críticos</small></div><div class="card"><b class="n">${ba.length}</b><br><small>baixos</small></div><div class="card"><b class="n">${vc.length}</b><br><small>vencendo</small></div></div>
+<div class="card">${f?(f.data==hoje()?'✅ Fechamento de hoje feito':'⚠️ Último fechamento: '+dBR(f.data)):'⚠️ Nenhum fechamento feito ainda'}</div>`
++lst(cr,'Itens críticos',i=>`<div class="card"><span class="tag bad">crítico</span><b>${esc(i.nome)}</b><br>${Math.round(i.estoque)} ${i.unidade} <small>(mínimo ${i.minimo})</small></div>`)
++lst(vc,'Vencendo em breve',i=>`<div class="card"><span class="tag bad">${diasAte(i.validade)<0?'vencido':diasAte(i.validade)+' dia(s)'}</span><b>${esc(i.nome)}</b><br><small>Validade ${dBR(i.validade)} • ideal criar promoção</small></div>`)
++lst(cp,'Últimas compras',c=>`<div class="card"><b>${esc(c.nome)}</b> — ${c.qtd} ${c.unidade}<br><small>${dBR(c.data)} • ${'★'.repeat(c.qualidade)}${'☆'.repeat(5-c.qualidade)} ${c.valor?'• R$ '+c.valor.toFixed(2):''}</small></div>`)
++`<div class="menu"><a href="comprador.html" style="background:#2B2F4A">🛒 Abrir painel do comprador</a><a href="loja.html" style="background:#6B2C91">🍇 Abrir painel da loja</a></div>`;
+</script></body></html>
