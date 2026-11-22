@@ -22,7 +22,7 @@ guard(['loja','dono'],async(u,p)=>{eu=u;if(p=='dono')$('nav').classList.remove('
  alerta()});
 function render(){let h='';
  for(const c in CAT){const g=L.filter(i=>(CAT[i.categoria]?i.categoria:'outro')==c);if(!g.length)continue;h+=`<h2>${CAT[c]}</h2>`;
-  for(const i of g)h+=`<div class="card"><b>${esc(i.nome)}</b> <small>(último: ${i.estoque} ${i.unidade})</small><div class="row"><input id="q_${i.id}" type="number" inputmode="decimal" min="0" step="any" placeholder="Quanto tem? (${i.unidade})" value="${F.contagens?.[i.id]??''}">${i.perecivel?`<input id="v_${i.id}" type="date" value="${i.validade||''}">`:''}</div>${i.perecivel?'<small>Validade do lote mais antigo que está na loja.</small>':''}</div>`}
+  for(const i of g)h+=`<div class="card"><b>${esc(i.nome)}</b> <small>(último: ${+(+i.estoque).toFixed(2)} ${i.unidade})</small><div class="row"><input id="q_${i.id}" type="number" inputmode="decimal" min="0" step="any" placeholder="Quanto tem? (${i.unidade})" value="${F.contagens?.[i.id]??''}">${i.perecivel?`<input id="v_${i.id}" type="date" value="${i.validade||''}">`:''}</div>${i.perecivel?'<small>Validade do lote mais antigo que está na loja.</small>':''}</div>`}
  $('lista').innerHTML=h}
 function alerta(){const v=L.filter(i=>i.validade&&i.estoque>0&&diasAte(i.validade)<=3);if(!v.length)return;
  $('pl').innerHTML=v.map(i=>{const d=diasAte(i.validade);return `<p><b>${esc(i.nome)}</b> — ${d<0?'vencido':d==0?'vence hoje':'vence em '+d+' dia(s)'} (${dBR(i.validade)})</p>`}).join('');

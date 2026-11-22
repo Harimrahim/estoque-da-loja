@@ -13,7 +13,7 @@ const cp=(await getDocs(query(collection(db,'compras'),orderBy('criadoEm','desc'
 const lst=(a,t,fn)=>a.length?`<h2>${t}</h2>`+a.map(fn).join(''):'';
 $('r').innerHTML=`<div class="row"><div class="card"><b class="n">${cr.length}</b><br><small>críticos</small></div><div class="card"><b class="n">${ba.length}</b><br><small>baixos</small></div><div class="card"><b class="n">${vc.length}</b><br><small>vencendo</small></div></div>
 <div class="card">${f?(f.data==hoje()?'✅ Fechamento de hoje feito':'⚠️ Último fechamento: '+dBR(f.data)):'⚠️ Nenhum fechamento feito ainda'}</div>`
-+lst(cr,'Itens críticos',i=>`<div class="card"><span class="tag bad">crítico</span><b>${esc(i.nome)}</b><br>${Math.round(i.estoque)} ${i.unidade} <small>(mínimo ${i.minimo})</small></div>`)
++lst(cr,'Itens críticos',i=>`<div class="card"><span class="tag bad">crítico</span><b>${esc(i.nome)}</b><br>${+(+i.estoque).toFixed(2)} ${i.unidade} <small>(mínimo ${i.minimo})</small></div>`)
 +lst(vc,'Vencendo em breve',i=>`<div class="card"><span class="tag bad">${diasAte(i.validade)<0?'vencido':diasAte(i.validade)+' dia(s)'}</span><b>${esc(i.nome)}</b><br><small>Validade ${dBR(i.validade)} • ideal criar promoção</small></div>`)
 +lst(cp,'Últimas compras',c=>`<div class="card"><b>${esc(c.nome)}</b> — ${c.qtd} ${c.unidade}<br><small>${dBR(c.data)} • ${'★'.repeat(c.qualidade)}${'☆'.repeat(5-c.qualidade)} ${c.valor?'• R$ '+c.valor.toFixed(2):''}</small></div>`)
 +`<div class="menu"><a href="comprador.html" style="background:#2B2F4A">🛒 Abrir painel do comprador</a><a href="loja.html" style="background:#6B2C91">🍇 Abrir painel da loja</a></div>`;
