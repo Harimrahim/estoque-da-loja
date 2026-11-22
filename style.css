@@ -1,0 +1,25 @@
+:root{--p:#6B2C91;--a:#F7C01B;--bg:#FFF4CC;--ink:#2B2F4A;--ok:#4C9A2A;--warn:#F5A300;--bad:#D62F3F}
+body.compra{--p:#2B2F4A;--a:#F5A300;--bg:#EAF3D8}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.4 "Trebuchet MS",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--p);color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:5px solid var(--a);position:sticky;top:0;z-index:5}
+header img{width:44px;height:44px;border-radius:10px}
+header h1{font-size:1.05rem;margin:0;flex:1;line-height:1.2}
+header a,header button{color:#fff;background:#ffffff26;border:0;border-radius:8px;padding:8px 10px;font:inherit;font-size:.85rem;text-decoration:none}
+main{max-width:720px;margin:auto;padding:14px}
+h2{margin:18px 0 8px;font-size:1.1rem;color:var(--p)}
+.card{background:#fff;border-radius:14px;padding:12px;margin:8px 0;border-left:6px solid var(--a)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.row>*{flex:1;min-width:120px}
+input,select{width:100%;padding:10px;border:2px solid #0002;border-radius:10px;font:inherit;background:#fff;margin-top:6px}
+.b{background:var(--p);color:#fff;border:0;border-radius:12px;padding:13px 16px;font:inherit;font-weight:700;width:100%;margin-top:10px}
+.s{background:var(--a);color:var(--ink);border:0;border-radius:10px;padding:8px 12px;font:inherit;font-weight:700;margin:6px 6px 0 0}
+.tag{border-radius:99px;padding:2px 10px;font-size:.8rem;font-weight:700;color:#fff;float:right}
+.ok{background:var(--ok)}.warn{background:var(--warn);color:var(--ink)}.bad{background:var(--bad)}
+small{color:#0009}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px}
+.tabs button{border:0;background:#fff;border-radius:99px;padding:9px 14px;font:inherit;font-weight:700;white-space:nowrap;color:var(--p)}
+.tabs button.on{background:var(--p);color:#fff}
+.modal{position:fixed;inset:0;background:#000a;display:flex;align-items:center;justify-content:center;padding:18px;z-index:9}
+.modal>div{background:#fff;border-radius:18px;padding:18px;max-width:420px;width:100%;border-top:8px solid var(--bad);max-height:90vh;overflow:auto}
+.hide{display:none!important}
