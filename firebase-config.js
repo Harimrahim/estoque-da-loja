@@ -1,4 +1,4 @@
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyDKGGj6xjV7JjK4TzAmuHMrV58bRX7W3cU",
   authDomain: "sedex-estoque-ab224.firebaseapp.com",
   projectId: "sedex-estoque-ab224",
