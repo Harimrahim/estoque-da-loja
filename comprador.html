@@ -28,6 +28,7 @@ addEventListener("error",function(e){m(e.message||("não carregou "+(e.target&&(
 <section id="hist" class="hide"></section></main>
 <script type="module">
 import {db,hoje,diasAte,esc,dBR,itens,$,collection,doc,getDocs,updateDoc,deleteDoc,writeBatch,query,orderBy,limit,serverTimestamp,sair} from "./comum.js";
+import {avisos} from "./avisos.js";
 const G={cons:{n:'Consumíveis',e:'🍇',cats:['adicional','base']},emb:{n:'Embalagens',e:'📦',cats:['embalagem']},out:{n:'Outros',e:'🧴',cats:['outro']}};
 const NC={adicional:'Adicional',base:'Açaí / base',embalagem:'Embalagem',outro:'Outro'};
 const P=s=>s.split(';').map(x=>{const[n,c,u,m,p]=x.split('|');return{nome:n,categoria:c,unidade:u,minimo:+m,perecivel:p=='1'}});
@@ -120,5 +121,5 @@ $('na').onclick=async()=>{const n=$('nn').value.trim();if(!n||$('nm').value===''
 $('seed').onclick=async()=>{const b=writeBatch(db);[...CAT.cons,...CAT.emb].filter(c=>!mesmo(c.nome)).forEach(c=>b.set(doc(collection(db,'itens')),novo(c)));await b.commit();await carregar()};
 $('tabs').innerHTML=T.map(t=>`<button onclick="setAba('${t[0]}')">${t[1]}</button>`).join('');
 $('dt').textContent=dBR(hoje());$('out').onclick=sair;
-await carregar();setAba('hoje');
+await carregar();setAba('hoje');avisos('comprador',L);
 </script></body></html>

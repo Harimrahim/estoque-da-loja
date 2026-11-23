@@ -9,10 +9,12 @@
 <div id="painel" class="painel hide"><div class="chips" id="chips"></div><div id="lista"></div></div>
 <h2>Último fechamento</h2><div id="fech"></div>
 <h2>Últimas compras</h2><div id="comp"></div>
+<h2>⚙️ Avisos</h2><div class="card"><small>Dia de compra</small><select id="cdia"></select><small>Lembrar do fechamento a partir das (hora, 0 a 23)</small><input id="chor" type="number" inputmode="numeric" min="0" max="23"><button class="b" id="csv">Salvar avisos</button></div>
 <div class="menu"><a href="comprador.html" style="background:#2B2F4A">🛒 Abrir painel do comprador</a><a href="loja.html" style="background:#6B2C91">🍇 Abrir painel da loja</a></div>
 </main>
 <script type="module">
 import {db,hoje,diasAte,esc,dBR,itens,$,collection,doc,getDocs,updateDoc,query,orderBy,limit} from "./comum.js";
+import {avisos,cfg,salvaCfg,DIAS_NOMES} from "./avisos.js";
 $('dt').textContent=dBR(hoje());
 const fq=x=>+(+x).toFixed(2);
 const L=await itens();
@@ -35,7 +37,9 @@ function lista(){if(!gr)return;
 window.selGr=k=>{gr=gr==k?null:k;fl='todos';tiles();lista()};window.setFl=f=>{fl=f;lista()};
 window.setMin=async id=>{const v=$('m_'+id).value;if(v===''||isNaN(+v))return alert('Digite o nível crítico.');
  try{await updateDoc(doc(db,'itens',id),{minimo:+v});L.find(x=>x.id==id).minimo=+v;res();tiles();lista()}catch(e){alert('Não salvou: '+e.message)}};
-res();tiles();
+res();tiles();avisos('dono',L);
+const C=await cfg();$('cdia').innerHTML=DIAS_NOMES.map((n,k)=>`<option value="${k}" ${k==C.diaCompra?'selected':''}>${n}</option>`).join('');$('chor').value=C.horaFechamento;
+$('csv').onclick=async()=>{try{await salvaCfg({diaCompra:+$('cdia').value,horaFechamento:+$('chor').value});alert('Avisos salvos ✔')}catch(e){alert('Não salvou: '+e.message+' (publique as regras novas no Firebase)')}};
 const f=(await getDocs(query(collection(db,'fechamentos'),orderBy('data','desc'),limit(1)))).docs[0]?.data();
 $('fech').innerHTML=`<div class="card">${f?(f.data==hoje()?'✅ Fechamento de hoje feito':'⚠️ Último fechamento: '+dBR(f.data)):'⚠️ Nenhum fechamento feito ainda'}</div>`;
 const cp=(await getDocs(query(collection(db,'compras'),orderBy('criadoEm','desc'),limit(5)))).docs.map(d=>d.data());
