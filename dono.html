@@ -2,19 +2,42 @@
 <link rel="stylesheet" href="style.css"></head>
 <body style="--p:#8a5a00;--p2:#F5A300;--a:#6B2C91;--bg:#FFF3C9">
 <header><img src="logo.png" alt=""><h1>Painel do Dono<br><small id="dt"></small></h1><a href="index.html">Menu</a></header>
-<main id="r"><div class="card">Carregando...</div></main>
+<main>
+<div id="resumo"></div>
+<h2>Escolha uma categoria</h2>
+<div class="tiles" id="tiles"></div>
+<div id="painel" class="painel hide"><div class="chips" id="chips"></div><div id="lista"></div></div>
+<h2>Último fechamento</h2><div id="fech"></div>
+<h2>Últimas compras</h2><div id="comp"></div>
+<div class="menu"><a href="comprador.html" style="background:#2B2F4A">🛒 Abrir painel do comprador</a><a href="loja.html" style="background:#6B2C91">🍇 Abrir painel da loja</a></div>
+</main>
 <script type="module">
-import {db,hoje,diasAte,esc,dBR,itens,$,collection,getDocs,query,orderBy,limit} from "./comum.js";
+import {db,hoje,diasAte,esc,dBR,itens,$,collection,doc,getDocs,updateDoc,query,orderBy,limit} from "./comum.js";
 $('dt').textContent=dBR(hoje());
-const L=await itens(),st=i=>i.estoque<=i.minimo?'bad':i.estoque<=i.minimo*1.5?'warn':'ok';
-const cr=L.filter(i=>st(i)=='bad'),ba=L.filter(i=>st(i)=='warn'),vc=L.filter(i=>i.validade&&i.estoque>0&&diasAte(i.validade)<=3);
+const fq=x=>+(+x).toFixed(2);
+const L=await itens();
+const st=i=>i.estoque<=i.minimo?'Crítico':i.estoque<=i.minimo*1.5?'Baixo':'OK';
+const cl=i=>({Crítico:'bad',Baixo:'warn',OK:'ok'})[st(i)];
+const venc=i=>i.validade&&i.estoque>0?diasAte(i.validade):null;
+// copos: 50 por pacote, 25 pacotes por caixa (só aqui no painel do dono)
+const cv=(n,i)=>/^copo/i.test(i.nome)&&i.unidade=='un'?` ≈ ${fq(n/50)} pct${n>=1250?' ≈ '+fq(n/1250)+' cx':''}`:'';
+const G={crit:{n:'Itens críticos',e:'🚨',f:i=>st(i)!='OK'},cons:{n:'Consumíveis',e:'🍇',f:i=>['adicional','base'].includes(i.categoria)},emb:{n:'Embalagens',e:'📦',f:i=>i.categoria=='embalagem'}};
+let gr=null,fl='todos';
+function res(){const cr=L.filter(i=>st(i)=='Crítico').length,ba=L.filter(i=>st(i)=='Baixo').length,vc=L.filter(i=>venc(i)!==null&&venc(i)<=3).length;
+ $('resumo').innerHTML=`<div class="row"><div class="card"><b class="n">${cr}</b><br><small>críticos</small></div><div class="card"><b class="n">${ba}</b><br><small>baixos</small></div><div class="card"><b class="n">${vc}</b><br><small>vencendo</small></div></div>`}
+function tiles(){$('tiles').innerHTML=Object.keys(G).map(k=>{const a=L.filter(G[k].f),c=a.filter(i=>st(i)=='Crítico').length;return `<button class="tile ${gr==k?'on':''}" onclick="selGr('${k}')">${k!='crit'&&c?`<i>${c}</i>`:''}<span>${G[k].e}</span>${G[k].n}<small>${a.length} itens</small></button>`}).join('');$('painel').classList.toggle('hide',!gr)}
+function lista(){if(!gr)return;
+ $('chips').innerHTML=[['todos','Todos'],['Crítico','🔴 Crítico'],['Baixo','🟠 Baixo'],['venc','⏳ Vencendo']].map(c=>`<button class="chip ${fl==c[0]?'on':''}" onclick="setFl('${c[0]}')">${c[1]}</button>`).join('');
+ const a=L.filter(G[gr].f).filter(i=>fl=='todos'||(fl=='venc'?(venc(i)!==null&&venc(i)<=3):st(i)==fl));
+ $('lista').innerHTML=a.length?a.map(i=>`<div class="card"><span class="tag ${cl(i)}">${st(i)}</span><b>${esc(i.nome)}</b><br>${fq(i.estoque)} ${i.unidade}${cv(i.estoque,i)} <small>${i.validade?'• val '+dBR(i.validade):''}</small>
+<div class="row"><input id="m_${i.id}" type="number" inputmode="decimal" step="any" value="${i.minimo}"><button class="s" onclick="setMin('${i.id}')">Salvar nível crítico</button></div>
+<small>Crítico em ${i.minimo} ${i.unidade}${cv(i.minimo,i)}</small></div>`).join(''):'<div class="card">Nada por aqui.</div>'}
+window.selGr=k=>{gr=gr==k?null:k;fl='todos';tiles();lista()};window.setFl=f=>{fl=f;lista()};
+window.setMin=async id=>{const v=$('m_'+id).value;if(v===''||isNaN(+v))return alert('Digite o nível crítico.');
+ try{await updateDoc(doc(db,'itens',id),{minimo:+v});L.find(x=>x.id==id).minimo=+v;res();tiles();lista()}catch(e){alert('Não salvou: '+e.message)}};
+res();tiles();
 const f=(await getDocs(query(collection(db,'fechamentos'),orderBy('data','desc'),limit(1)))).docs[0]?.data();
+$('fech').innerHTML=`<div class="card">${f?(f.data==hoje()?'✅ Fechamento de hoje feito':'⚠️ Último fechamento: '+dBR(f.data)):'⚠️ Nenhum fechamento feito ainda'}</div>`;
 const cp=(await getDocs(query(collection(db,'compras'),orderBy('criadoEm','desc'),limit(5)))).docs.map(d=>d.data());
-const lst=(a,t,fn)=>a.length?`<h2>${t}</h2>`+a.map(fn).join(''):'';
-$('r').innerHTML=`<div class="row"><div class="card"><b class="n">${cr.length}</b><br><small>críticos</small></div><div class="card"><b class="n">${ba.length}</b><br><small>baixos</small></div><div class="card"><b class="n">${vc.length}</b><br><small>vencendo</small></div></div>
-<div class="card">${f?(f.data==hoje()?'✅ Fechamento de hoje feito':'⚠️ Último fechamento: '+dBR(f.data)):'⚠️ Nenhum fechamento feito ainda'}</div>`
-+lst(cr,'Itens críticos',i=>`<div class="card"><span class="tag bad">crítico</span><b>${esc(i.nome)}</b><br>${+(+i.estoque).toFixed(2)} ${i.unidade} <small>(mínimo ${i.minimo})</small></div>`)
-+lst(vc,'Vencendo em breve',i=>`<div class="card"><span class="tag bad">${diasAte(i.validade)<0?'vencido':diasAte(i.validade)+' dia(s)'}</span><b>${esc(i.nome)}</b><br><small>Validade ${dBR(i.validade)} • ideal criar promoção</small></div>`)
-+lst(cp,'Últimas compras',c=>`<div class="card"><b>${esc(c.nome)}</b> — ${c.qtd} ${c.unidade}<br><small>${dBR(c.data)} • ${'★'.repeat(c.qualidade)}${'☆'.repeat(5-c.qualidade)} ${c.valor?'• R$ '+c.valor.toFixed(2):''}</small></div>`)
-+`<div class="menu"><a href="comprador.html" style="background:#2B2F4A">🛒 Abrir painel do comprador</a><a href="loja.html" style="background:#6B2C91">🍇 Abrir painel da loja</a></div>`;
+$('comp').innerHTML=cp.length?cp.map(c=>`<div class="card"><b>${esc(c.nome)}</b> — ${fq(c.qtd)} ${c.unidade}<br><small>${dBR(c.data)} • ${'★'.repeat(c.qualidade)}${'☆'.repeat(5-c.qualidade)} ${c.valor?'• R$ '+c.valor.toFixed(2):''}</small></div>`).join(''):'<div class="card">Nenhuma compra registrada ainda.</div>';
 </script></body></html>

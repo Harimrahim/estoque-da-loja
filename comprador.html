@@ -18,7 +18,7 @@ addEventListener("error",function(e){m(e.message||("não carregou "+(e.target&&(
    <div id="catbox"><b>Itens do cardápio</b><br><small>Toque para selecionar vários</small><div class="chips" id="cat"></div><button class="b" id="addsel">Adicionar selecionados</button><hr style="border:0;border-top:2px dashed #2b2f4a22;margin:16px 0"></div>
    <b>Digitar um item novo</b>
    <input id="nn" placeholder="Nome do item">
-   <div class="row"><select id="nc"></select><select id="nu"><option>kg</option><option>g</option><option value="cx">caixa (cx)</option><option>un</option><option>ml</option></select></div>
+   <div class="row"><select id="nc"></select><select id="nu"><option value="kg">kg (0,65 = 650 g)</option><option value="L">litro (L)</option><option value="cx">caixa (cx)</option><option value="un">unidade (un)</option></select></div>
    <input id="nm" type="number" inputmode="decimal" step="any" placeholder="Estoque mínimo (aviso crítico)">
    <label><input id="np" type="checkbox" style="width:auto"> Perecível (pedir validade)</label>
    <button class="b" id="na">Cadastrar item</button>
@@ -31,14 +31,14 @@ import {db,hoje,diasAte,esc,dBR,itens,$,collection,doc,getDocs,updateDoc,deleteD
 const G={cons:{n:'Consumíveis',e:'🍇',cats:['adicional','base']},emb:{n:'Embalagens',e:'📦',cats:['embalagem']},out:{n:'Outros',e:'🧴',cats:['outro']}};
 const NC={adicional:'Adicional',base:'Açaí / base',embalagem:'Embalagem',outro:'Outro'};
 const P=s=>s.split(';').map(x=>{const[n,c,u,m,p]=x.split('|');return{nome:n,categoria:c,unidade:u,minimo:+m,perecivel:p=='1'}});
-const CAT={cons:P("Açaí (base)|base|cx|2|1;Leite Condensado|adicional|kg|1|0;Leite em Pó|adicional|kg|1|0;Granola|adicional|kg|1|0;Banana|adicional|kg|2|1;Nutella|adicional|kg|1|0;Creme de Leitinho|adicional|kg|1|0;Creme de Morango|adicional|kg|1|0;Creme de Chocolate|adicional|kg|1|0;Creme de Pistache|adicional|kg|1|0;Ovomaltine|adicional|kg|0.5|0;Amendoim Torrado|adicional|kg|0.5|0;Paçoca|adicional|kg|0.5|0;Sucrilhos|adicional|kg|0.5|0;Gotas de Chocolate|adicional|kg|0.5|0;Bis Lacta|adicional|kg|0.5|0;Leite Condensado Piracanjuba|adicional|kg|1|0;Kiwi|adicional|kg|1|1;Uva|adicional|kg|1|1;Confete|adicional|kg|0.5|0"),
- emb:P("Copo 700ml|embalagem|un|100|0;Copo 500ml|embalagem|un|100|0;Copo 400ml|embalagem|un|100|0;Copo 300ml|embalagem|un|100|0;Marmita 700g|embalagem|un|100|0;Pote 1 litro|embalagem|un|100|0;Roleta|embalagem|un|5|0;Colher|embalagem|un|200|0"),out:[]};
+const CAT={cons:P("Açaí (base)|base|cx|2|0;Leite Condensado|adicional|kg|1|0;Leite Condensado Piracanjuba|adicional|L|1|0;Leite em Pó|adicional|kg|1|0;Granola|adicional|kg|1|0;Banana|adicional|kg|2|0;Kiwi|adicional|kg|1|0;Uva|adicional|kg|1|0;Nutella|adicional|kg|1|0;Creme de Leitinho|adicional|kg|1|0;Creme de Morango|adicional|kg|1|0;Creme de Chocolate|adicional|kg|1|0;Creme de Pistache|adicional|kg|1|0;Ovomaltine|adicional|kg|0.5|0;Amendoim Torrado|adicional|kg|0.5|0;Paçoca|adicional|kg|0.5|0;Sucrilhos|adicional|kg|0.5|0;Gotas de Chocolate|adicional|kg|0.5|0;Bis Lacta|adicional|kg|0.5|0;Confete|adicional|kg|0.5|0"),
+ emb:P("Copo 700ml|embalagem|un|50|0;Copo 500ml|embalagem|un|50|0;Copo 400ml|embalagem|un|50|0;Copo 300ml|embalagem|un|50|0;Marmita 700g|embalagem|un|50|0;Pote 1 litro|embalagem|un|50|0;Tampa|embalagem|un|100|0;Touca|embalagem|un|50|0;Roleta|embalagem|un|5|0;Colher|embalagem|un|100|0"),out:[]};
 const T=[['hoje','Hoje'],['est','Estoque'],['hist','Histórico']];
 let L=[],gr=null,q='',fl='todos',ab=null,sel=new Set(),pend=[];
 const st=i=>i.estoque<=i.minimo?['Crítico','bad']:i.estoque<=i.minimo*1.5?['Baixo','warn']:['OK','ok'];
 const dias=i=>i.consumoMedio>0?i.estoque/i.consumoMedio:null;
 const fq=x=>+(+x).toFixed(2);
-const arred=(x,u)=>u=='kg'?Math.ceil(x*2)/2:Math.ceil(x);
+const arred=(x,u)=>(u=='kg'||u=='L')?Math.ceil(x*2)/2:Math.ceil(x);
 const sugest=i=>Math.max(0,arred(Math.max(i.minimo*3,(i.consumoMedio||0)*7)-i.estoque,i.unidade));
 const venc=i=>i.validade&&i.estoque>0?diasAte(i.validade):null;
 const grupo=i=>Object.keys(G).find(k=>G[k].cats.includes(i.categoria))||'out';
@@ -58,12 +58,12 @@ function rTiles(){
  $('tiles').innerHTML=Object.keys(G).map(k=>{const a=L.filter(i=>grupo(i)==k),c=a.filter(i=>st(i)[0]=='Crítico').length;return `<button class="tile ${gr==k?'on':''}" onclick="selGr('${k}')">${c?`<i>${c}</i>`:''}<span>${G[k].e}</span>${G[k].n}<small>${a.length} itens</small></button>`}).join('');
  $('painel').classList.toggle('hide',!gr);$('seedc').classList.toggle('hide',L.length>0)}
 const card=i=>{const [s,c]=st(i),d=dias(i);
- return `<div class="card" id="c_${i.id}"><div class="hd" onclick="tog('${i.id}')"><span class="tag ${c}">${s}</span><b>${esc(i.nome)}</b><br>${fq(i.estoque)} ${i.unidade} <small>• mín ${i.minimo}${d!==null?' • dura ~'+d.toFixed(1)+' dia(s)':''}${i.validade?' • val '+dBR(i.validade):''}</small></div>`
- +(ab==i.id?`<div class="det"><small>Sugestão: comprar ${sugest(i)} ${i.unidade} (≈7 dias)</small>
+ return `<div class="card" id="c_${i.id}"><div class="hd" onclick="tog('${i.id}')"><span class="tag ${c}">${s}</span><b>${esc(i.nome)}</b><br>${fq(i.estoque)} ${i.unidade} <small>• crítico ${i.minimo}${d!==null?' • dura ~'+d.toFixed(1)+' dia(s)':''}${i.validade?' • val '+dBR(i.validade):''}</small></div>`
+ +(ab==i.id?`<div class="det"><b>Nível crítico</b> <small>(avisa quando chegar nesse número)</small><div class="row"><input id="mn" type="number" inputmode="decimal" step="any" value="${i.minimo}"><button class="s" onclick="salvaMin('${i.id}')">Salvar nível crítico</button></div><small>Sugestão: comprar ${sugest(i)} ${i.unidade} (≈7 dias)</small>
  <div class="row"><input id="cq" type="number" inputmode="decimal" step="any" placeholder="Qtd comprada (${i.unidade})" value="${sugest(i)||''}"><input id="cv" type="number" inputmode="decimal" step="any" placeholder="Valor total R$"></div>
  <div class="row"><select id="cl"><option value="5">Qualidade: ótima</option><option value="4">Qualidade: boa</option><option value="3">Qualidade: regular</option><option value="2">Qualidade: ruim</option><option value="1">Qualidade: péssima</option></select><input id="cf" placeholder="Fornecedor"></div>
  ${i.perecivel?'<input id="cd" type="date"><small>Validade do que chegou</small>':''}
- <button class="b" onclick="comprar('${i.id}')">🛒 Registrar compra</button><button class="s" onclick="minimo('${i.id}')">Mudar mínimo</button><button class="s" onclick="unidade('${i.id}')">Mudar unidade</button><button class="s" onclick="excluir('${i.id}')">Excluir</button></div>`:'')+'</div>'};
+ <button class="b" onclick="comprar('${i.id}')">🛒 Registrar compra</button><button class="s" onclick="unidade('${i.id}')">Mudar unidade</button><button class="s" onclick="excluir('${i.id}')">Excluir</button></div>`:'')+'</div>'};
 function rLista(){if(!gr)return;
  $('chips').innerHTML=[['todos','Todos'],['Crítico','🔴 Crítico'],['Baixo','🟠 Baixo'],['venc','⏳ Vencendo']].map(c=>`<button class="chip ${fl==c[0]?'on':''}" onclick="setFl('${c[0]}')">${c[1]}</button>`).join('');
  const t=q.trim().toLowerCase(),a=L.filter(i=>grupo(i)==gr&&(!t||i.nome.toLowerCase().includes(t))&&(fl=='todos'||(fl=='venc'?(venc(i)!==null&&venc(i)<=3):st(i)[0]==fl)));
@@ -92,8 +92,9 @@ Object.assign(window,{setAba,
  abrirSheet:f=>{sel.clear();rCat();$('sheet').classList.remove('hide');if(f)$('nn').value=q.trim();$('sheet').scrollIntoView({behavior:'smooth'})},
  tgl:k=>{const n=pend[k].nome;sel.has(n)?sel.delete(n):sel.add(n);rCat()},
  todos:()=>{sel.size==pend.length?sel.clear():pend.forEach(c=>sel.add(c.nome));rCat()},
+ salvaMin:async id=>{const v=$('mn').value;if(v===''||isNaN(+v))return alert('Digite o número do nível crítico.');await updateDoc(doc(db,'itens',id),{minimo:+v});await carregar()},
  minimo:async id=>{const i=L.find(x=>x.id==id),v=prompt('Novo estoque mínimo ('+i.unidade+'):',i.minimo);if(v===null||v===''||isNaN(+v))return;await updateDoc(doc(db,'itens',id),{minimo:+v});await carregar()},
- unidade:async id=>{const i=L.find(x=>x.id==id),u=(prompt('Unidade deste item (kg, g, cx, un ou ml):',i.unidade)||'').trim();if(!['kg','g','cx','un','ml'].includes(u))return;await updateDoc(doc(db,'itens',id),{unidade:u});await carregar()},
+ unidade:async id=>{const i=L.find(x=>x.id==id),u=(prompt('Unidade deste item (kg, L, cx ou un):',i.unidade)||'').trim();if(!['kg','L','cx','un'].includes(u))return;await updateDoc(doc(db,'itens',id),{unidade:u});await carregar()},
  excluir:async id=>{if(!confirm('Excluir este item?'))return;await deleteDoc(doc(db,'itens',id));ab=null;await carregar()},
  comprar:async id=>{const i=L.find(x=>x.id==id),n=+$('cq').value;if(!(n>0))return alert('Informe a quantidade comprada.');
   const nv=$('cd')?$('cd').value:'',v=nv&&(!i.validade||nv<i.validade)?nv:(i.validade||''),b=writeBatch(db);
