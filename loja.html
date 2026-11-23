@@ -22,7 +22,7 @@ guard(['loja','dono'],async(u,p)=>{eu=u;if(p=='dono')$('nav').classList.remove('
  alerta()});
 function render(){let h='';
  for(const c in CAT){const g=L.filter(i=>(CAT[i.categoria]?i.categoria:'outro')==c);if(!g.length)continue;h+=`<h2>${CAT[c]}</h2>`;
-  for(const i of g)h+=`<div class="card"><b>${esc(i.nome)}</b> <small>(último: ${+(+i.estoque).toFixed(2)} ${i.unidade})</small><div class="row"><input id="q_${i.id}" type="number" inputmode="decimal" min="0" step="any" placeholder="Quanto tem? (${i.unidade})" value="${F.contagens?.[i.id]??''}">${i.perecivel?`<input id="v_${i.id}" type="date" value="${i.validade||''}">`:''}</div>${i.perecivel?'<small>Validade do lote mais antigo que está na loja.</small>':''}</div>`}
+  for(const i of g)h+=`<div class="card"><b>${esc(i.nome)}</b> <small>(último: ${+(+i.estoque).toFixed(2)} ${i.unidade})</small><div class="row"><input id="q_${i.id}" type="number" inputmode="decimal" min="0" step="any" placeholder="Quanto tem? (${i.unidade})" value="${F.contagens?.[i.id]??''}"></div><button type="button" class="s" onclick="this.nextElementSibling.classList.toggle('hide')">📅 Validade (opcional)${i.validade?': '+dBR(i.validade):''}</button><div class="${i.validade?'':'hide'}"><input id="v_${i.id}" type="date" value="${i.validade||''}"><small>Validade do lote mais antigo que está na loja.</small></div></div>`}
  $('lista').innerHTML=h}
 function alerta(){const v=L.filter(i=>i.validade&&i.estoque>0&&diasAte(i.validade)<=3);if(!v.length)return;
  $('pl').innerHTML=v.map(i=>{const d=diasAte(i.validade);return `<p><b>${esc(i.nome)}</b> — ${d<0?'vencido':d==0?'vence hoje':'vence em '+d+' dia(s)'} (${dBR(i.validade)})</p>`}).join('');
@@ -30,11 +30,10 @@ function alerta(){const v=L.filter(i=>i.validade&&i.estoque>0&&diasAte(i.validad
 $('salvar').onclick=async()=>{
  const h=hoje(),b=writeBatch(db),c={},vs={},falta=[];
  for(const i of L){const q=$('q_'+i.id).value;if(q==='')continue;const n=+q;c[i.id]=n;
-  const v=i.perecivel?$('v_'+i.id).value:'';if(v)vs[i.id]=v;else if(i.perecivel&&n>0)falta.push(i.nome);
+  const v=$('v_'+i.id).value;if(v)vs[i.id]=v;
   let m=i.consumoMedio||0;if(i.ultimoFechamento!=h&&i.estoque>=n){const u=i.estoque-n;m=m>0?.7*m+.3*u:u}
   b.update(doc(db,'itens',i.id),{estoque:n,validade:v,consumoMedio:m,ultimoFechamento:h,atualizadoEm:serverTimestamp()})}
  if(!Object.keys(c).length)return alert('Preencha pelo menos um item.');
- if(falta.length&&!confirm('Falta a validade de: '+falta.join(', ')+'. Salvar assim mesmo?'))return;
  b.set(doc(db,'fechamentos',h),{data:h,contagens:{...(F.contagens||{}),...c},validades:{...(F.validades||{}),...vs},por:eu.email},{merge:true});
  if(new Date().getDay()==1){const t={};L.forEach(i=>t[i.id]=c[i.id]??i.estoque);b.set(doc(db,'giro',h),{data:h,totais:t,por:eu.email})}
  try{await b.commit();alert('Fechamento salvo ✔');location.reload()}catch(e){alert('Não salvou: '+e.message)}};

@@ -20,10 +20,10 @@ addEventListener("error",function(e){m(e.message||("não carregou "+(e.target&&(
    <input id="nn" placeholder="Nome do item">
    <div class="row"><select id="nc"></select><select id="nu"><option value="kg">kg (0,65 = 650 g)</option><option value="L">litro (L)</option><option value="cx">caixa (cx)</option><option value="un">unidade (un)</option></select></div>
    <input id="nm" type="number" inputmode="decimal" step="any" placeholder="Estoque mínimo (aviso crítico)">
-   <label><input id="np" type="checkbox" style="width:auto"> Perecível (pedir validade)</label>
-   <button class="b" id="na">Cadastrar item</button>
+      <button class="b" id="na">Cadastrar item</button>
   </div>
  </div>
+<div class="card"><b>Itens antigos em gramas?</b><br><small>Atualiza os itens já cadastrados para kg, litro, caixa e unidade. Estoque em gramas vira kg; o que não dá para converter (como o açaí em caixas) volta para 0.</small><button class="b" onclick="migrar()">🔄 Atualizar para o padrão novo</button></div>
 </section>
 <section id="hist" class="hide"></section></main>
 <script type="module">
@@ -62,7 +62,7 @@ const card=i=>{const [s,c]=st(i),d=dias(i);
  +(ab==i.id?`<div class="det"><b>Nível crítico</b> <small>(avisa quando chegar nesse número)</small><div class="row"><input id="mn" type="number" inputmode="decimal" step="any" value="${i.minimo}"><button class="s" onclick="salvaMin('${i.id}')">Salvar nível crítico</button></div><small>Sugestão: comprar ${sugest(i)} ${i.unidade} (≈7 dias)</small>
  <div class="row"><input id="cq" type="number" inputmode="decimal" step="any" placeholder="Qtd comprada (${i.unidade})" value="${sugest(i)||''}"><input id="cv" type="number" inputmode="decimal" step="any" placeholder="Valor total R$"></div>
  <div class="row"><select id="cl"><option value="5">Qualidade: ótima</option><option value="4">Qualidade: boa</option><option value="3">Qualidade: regular</option><option value="2">Qualidade: ruim</option><option value="1">Qualidade: péssima</option></select><input id="cf" placeholder="Fornecedor"></div>
- ${i.perecivel?'<input id="cd" type="date"><small>Validade do que chegou</small>':''}
+ <input id="cd" type="date"><small>Validade do lote (opcional)</small>
  <button class="b" onclick="comprar('${i.id}')">🛒 Registrar compra</button><button class="s" onclick="unidade('${i.id}')">Mudar unidade</button><button class="s" onclick="excluir('${i.id}')">Excluir</button></div>`:'')+'</div>'};
 function rLista(){if(!gr)return;
  $('chips').innerHTML=[['todos','Todos'],['Crítico','🔴 Crítico'],['Baixo','🟠 Baixo'],['venc','⏳ Vencendo']].map(c=>`<button class="chip ${fl==c[0]?'on':''}" onclick="setFl('${c[0]}')">${c[1]}</button>`).join('');
@@ -92,6 +92,16 @@ Object.assign(window,{setAba,
  abrirSheet:f=>{sel.clear();rCat();$('sheet').classList.remove('hide');if(f)$('nn').value=q.trim();$('sheet').scrollIntoView({behavior:'smooth'})},
  tgl:k=>{const n=pend[k].nome;sel.has(n)?sel.delete(n):sel.add(n);rCat()},
  todos:()=>{sel.size==pend.length?sel.clear():pend.forEach(c=>sel.add(c.nome));rCat()},
+ migrar:async()=>{if(!confirm('Atualizar os itens do cardápio para kg, litro, caixa e unidade? Estoque em gramas vira kg; o que não dá para converter volta para 0.'))return;
+  const tds=[...CAT.cons,...CAT.emb],b=writeBatch(db);let c=0;
+  L.forEach(i=>{const k=tds.find(x=>x.nome.toLowerCase()==i.nome.toLowerCase());if(!k)return;const u=i.unidade;
+   const o={unidade:k.unidade,perecivel:false,atualizadoEm:serverTimestamp()};
+   if(/açaí|kiwi|banana|uva/i.test(i.nome))o.validade='';
+   if(u!=k.unidade){const f=(u=='g'&&(k.unidade=='kg'||k.unidade=='L'))?.001:(u=='pct'&&k.unidade=='un'&&/^copo/i.test(i.nome))?50:0;
+    o.minimo=k.minimo;o.estoque=+((i.estoque||0)*f).toFixed(3);o.consumoMedio=+((i.consumoMedio||0)*f).toFixed(3);}
+   if(u!=k.unidade||o.validade===''||i.perecivel){b.update(doc(db,'itens',i.id),o);c++}});
+  if(!c)return alert('Nada para atualizar: os itens já estão no padrão novo.');
+  try{await b.commit();await carregar();alert(c+' itens atualizados ✔')}catch(e){alert('Não salvou: '+e.message)}},
  salvaMin:async id=>{const v=$('mn').value;if(v===''||isNaN(+v))return alert('Digite o número do nível crítico.');await updateDoc(doc(db,'itens',id),{minimo:+v});await carregar()},
  minimo:async id=>{const i=L.find(x=>x.id==id),v=prompt('Novo estoque mínimo ('+i.unidade+'):',i.minimo);if(v===null||v===''||isNaN(+v))return;await updateDoc(doc(db,'itens',id),{minimo:+v});await carregar()},
  unidade:async id=>{const i=L.find(x=>x.id==id),u=(prompt('Unidade deste item (kg, L, cx ou un):',i.unidade)||'').trim();if(!['kg','L','cx','un'].includes(u))return;await updateDoc(doc(db,'itens',id),{unidade:u});await carregar()},
@@ -105,7 +115,7 @@ $('nc').onchange=()=>{$('nu').value=$('nc').value=='base'?'cx':$('nc').value=='e
 $('bq').oninput=e=>{q=e.target.value;rLista()};
 $('addsel').onclick=async()=>{if(!sel.size)return alert('Toque nos itens que quer adicionar.');const b=writeBatch(db);CAT[gr].filter(c=>sel.has(c.nome)).forEach(c=>b.set(doc(collection(db,'itens')),novo(c)));await b.commit();sel.clear();$('sheet').classList.add('hide');await carregar()};
 $('na').onclick=async()=>{const n=$('nn').value.trim();if(!n||$('nm').value==='')return alert('Digite o nome e o estoque mínimo.');if(mesmo(n))return alert('Esse item já existe.');
- const b=writeBatch(db);b.set(doc(collection(db,'itens')),novo({nome:n,categoria:$('nc').value,unidade:$('nu').value,minimo:+$('nm').value,perecivel:$('np').checked}));await b.commit();
+ const b=writeBatch(db);b.set(doc(collection(db,'itens')),novo({nome:n,categoria:$('nc').value,unidade:$('nu').value,minimo:+$('nm').value,perecivel:false}));await b.commit();
  $('nn').value=$('nm').value='';q='';$('bq').value='';$('sheet').classList.add('hide');await carregar()};
 $('seed').onclick=async()=>{const b=writeBatch(db);[...CAT.cons,...CAT.emb].filter(c=>!mesmo(c.nome)).forEach(c=>b.set(doc(collection(db,'itens')),novo(c)));await b.commit();await carregar()};
 $('tabs').innerHTML=T.map(t=>`<button onclick="setAba('${t[0]}')">${t[1]}</button>`).join('');
