@@ -15,6 +15,7 @@ addEventListener("error",function(e){m(e.message||("não carregou "+(e.target&&(
 </section>
 <section id="cot" class="hide">
  <h2>💲 Cotação e histórico de preços</h2>
+ <div class="card"><button class="b" id="novaCotBtn">➕ Nova cotação</button><div id="novaCotForm" class="hide"><h3>Registrar preço pesquisado</h3><label>Produto</label><select id="cotItem"></select><label>Fornecedor</label><input id="cotFornecedor" placeholder="Nome do fornecedor / estabelecimento"><label>Preço unitário (R$)</label><input id="cotPreco" type="number" step="0.01" min="0" placeholder="Preço por unidade"><label>Unidade</label><input id="cotUnidade" placeholder="kg, L, cx, un..."><label>Data da pesquisa</label><input id="cotData" type="date"><label>Observações</label><input id="cotObs" placeholder="Qualidade, promoção, condição, etc."><div class="row"><button class="b" id="salvarCot">Salvar cotação</button><button type="button" id="cancelarCot">Cancelar</button></div></div></div>
  <input id="cq2" placeholder="🔎 Buscar item" autocomplete="off">
  <div id="cl2"></div>
 </section>
@@ -41,7 +42,7 @@ addEventListener("error",function(e){m(e.message||("não carregou "+(e.target&&(
 <section id="hist" class="hide"></section></main>
 <button id="voltar" class="fab hide" onclick="setAba('menu')">☰ Menu</button>
 <script type="module">
-import {db,hoje,diasAte,esc,dBR,itens,$,collection,doc,getDocs,updateDoc,deleteDoc,writeBatch,query,orderBy,limit,serverTimestamp,sair} from "./comum.js";
+import {db,hoje,diasAte,esc,dBR,itens,$,collection,doc,getDocs,updateDoc,deleteDoc,writeBatch,query,orderBy,limit,serverTimestamp,addDoc,sair} from "./comum.js";
 import {avisos} from "./avisos.js";
 const G={cons:{n:'Consumíveis',e:'🍇',cats:['adicional','base']},emb:{n:'Embalagens',e:'📦',cats:['embalagem']},out:{n:'Outros',e:'🧴',cats:['outro']}};
 const NC={adicional:'Adicional',base:'Açaí / base',embalagem:'Embalagem',outro:'Outro'};
@@ -81,17 +82,21 @@ function rSem(){const t=$('sq').value.trim().toLowerCase();
   <div class="row"><input type="number" inputmode="decimal" step="any" placeholder="Qtd (${i.unidade})" value="${s.q}" oninput="S['${i.id}'].q=this.value;rTot()"><input type="number" inputmode="decimal" step="any" placeholder="Valor total R$" value="${s.v}" oninput="S['${i.id}'].v=this.value;rTot()"></div></div>`}).join('');rTot()}
 function rTot(){const m=L.filter(i=>+S[i.id]?.q>0),v=m.reduce((s,i)=>s+(+S[i.id].v||0),0);
  $('srs').innerHTML=`<div class="card"><b>${m.length}</b> itens na compra${v?` • total R$ ${v.toFixed(2)}`:''}</div>`}
-function rCot(){const t=$('cq2').value.trim().toLowerCase();
+async function carCotacoes(){return (await getDocs(query(collection(db,'cotacoes'),orderBy('criadoEm','desc'),limit(500)))).docs.map(x=>({id:x.id,...x.data()}))}
+async function rCot(){const cotacoes=await carCotacoes();const t=$('cq2').value.trim().toLowerCase();
  const a=L.filter(i=>!t||i.nome.toLowerCase().includes(t));
  $('cl2').innerHTML=a.map(i=>{const c=CP.filter(x=>x.itemId==i.id&&x.qtd>0&&x.valor>0).map(x=>({...x,p:x.valor/x.qtd}));
-  if(!c.length)return `<div class="card"><b>${esc(i.nome)}</b><br><small>Sem compras com valor registrado ainda.</small></div>`;
-  const ps=c.map(x=>x.p),med=ps.reduce((s,x)=>s+x,0)/ps.length,mn=c.reduce((m,x)=>x.p<m.p?x:m);
-  const fo={};c.forEach(x=>{const k=(x.fornecedor||'sem fornecedor').trim()||'sem fornecedor';(fo[k]=fo[k]||[]).push(x.p)});
-  const fs=Object.entries(fo).map(([k,v])=>[k,v.reduce((s,x)=>s+x,0)/v.length]).sort((x,y)=>x[1]-y[1]);
-  const u=i.unidade,m2=x=>'R$ '+x.toFixed(2);
-  return `<div class="card"><b>${esc(i.nome)}</b> <small>(preço por ${u})</small><br>Último <b>${m2(c[0].p)}</b> • Média <b>${m2(med)}</b> • Mais barato <b>${m2(mn.p)}</b> <small>(${dBR(mn.data)})</small>
-  ${fs.length>1?'<br><small>Fornecedores (média): '+fs.map(f=>esc(f[0])+' '+m2(f[1])).join(' • ')+'</small>':''}
-  <details><summary>Ver compras (${c.length})</summary>${c.slice(0,12).map(x=>`<small>${dBR(x.data)} • ${fq(x.qtd)} ${u} • ${m2(x.p)}/${u}${x.fornecedor?' • '+esc(x.fornecedor):''} • ${'★'.repeat(x.qualidade||0)}</small><br>`).join('')}</details></div>`}).join('')||'<div class="card">Nenhum item encontrado.</div>'}
+ const novas=cotacoes.filter(x=>x.itemId==i.id&&x.preco>0);
+ const ps=c.map(x=>x.p),med=ps.length?ps.reduce((s,x)=>s+x,0)/ps.length:null,mn=c.length?c.reduce((m,x)=>x.p<m.p?x:m):null;
+ const fo={};c.forEach(x=>{const k=(x.fornecedor||'sem fornecedor').trim()||'sem fornecedor';(fo[k]=fo[k]||[]).push(x.p)});
+ const fs=Object.entries(fo).map(([k,v])=>[k,v.reduce((s,x)=>s+x,0)/v.length]).sort((x,y)=>x[1]-y[1]);
+ const u=i.unidade,m2=x=>'R$ '+x.toFixed(2);
+ const hist=c.length?`<div><b>Compras reais:</b> Último ${m2(c[0].p)} • Média ${m2(med)} • Menor ${m2(mn.p)} (${dBR(mn.data)})</div>`:'<div><small>Sem compras reais com preço registrado.</small></div>';
+ const cotHtml=novas.length?`<details open><summary>Cotações pesquisadas (${novas.length})</summary>${novas.map(x=>`<div class="card"><b>${esc(x.fornecedor||'Fornecedor não informado')}</b> • ${m2(x.preco)}/${esc(x.unidade||u)}<br><small>${dBR(x.data)}${x.obs?' • '+esc(x.obs):''}</small></div>`).join('')}</details>`:'<small>Nenhuma cotação externa registrada.</small>';
+ return `<div class="card"><b>${esc(i.nome)}</b> <small>(por ${u})</small><br>${hist}
+ ${fs.length?'<br><small>Fornecedores de compras (média): '+fs.map(f=>esc(f[0])+' '+m2(f[1])).join(' • ')+'</small>':''}
+ ${cotHtml}
+ ${c.length?`<details><summary>Ver compras reais (${c.length})</summary>${c.slice(0,12).map(x=>`<small>${dBR(x.data)} • ${fq(x.qtd)} ${u} • ${m2(x.p)}/${u}${x.fornecedor?' • '+esc(x.fornecedor):''} • ${'★'.repeat(x.qualidade||0)}</small><br>`).join('')}</details>`:''}</div>`}).join('')||'<div class="card">Nenhum item encontrado.</div>'}
 async function carregar(){L=await itens();await carCP();rHoje();rTiles();rLista();rHist();rMenu()}
 function rHoje(){
  if(!L.length)return $('hoje').innerHTML='<div class="card"><b>Nenhum item cadastrado ainda.</b><br><small>Vá em Estoque e carregue os itens do cardápio.</small><button class="b" onclick="setAba(\'est\')">Ir para Estoque</button></div>';
@@ -166,7 +171,13 @@ Object.assign(window,{setAba,rTot:()=>rTot(),
   try{await b.commit();ab=null;await carregar();alert('Compra registrada ✔ estoque atualizado')}catch(e){alert('Não salvou: '+e.message)}}});
 $('nc').onchange=()=>{$('nu').value=$('nc').value=='base'?'cx':$('nc').value=='embalagem'?'un':'kg'};
 $('bq').oninput=e=>{q=e.target.value;rLista()};
-$('sq').oninput=rSem;$('cq2').oninput=rCot;$('sreg').onclick=()=>window.regSemana();
+$('sq').oninput=rSem;$('cq2').oninput=()=>rCot();$('sreg').onclick=()=>window.regSemana();
+$('novaCotBtn').onclick=()=>{$('novaCotForm').classList.toggle('hide');$('cotItem').innerHTML=L.map(i=>`<option value="${i.id}">${esc(i.nome)}</option>`).join('');$('cotData').value=hoje();$('cotUnidade').value=L.find(i=>i.id===$('cotItem').value)?.unidade||''};
+$('cotItem').onchange=()=>{$('cotUnidade').value=L.find(i=>i.id===$('cotItem').value)?.unidade||''};
+$('cancelarCot').onclick=()=>{$('novaCotForm').classList.add('hide')};
+$('salvarCot').onclick=async()=>{const item=L.find(i=>i.id===$('cotItem').value),forn=$('cotFornecedor').value.trim(),preco=+$('cotPreco').value,data=$('cotData').value||hoje(),unidade=$('cotUnidade').value.trim()||item?.unidade,obs=$('cotObs').value.trim();
+if(!item||!forn||!(preco>0)||!unidade)return alert('Preencha produto, fornecedor, preço e unidade.');
+try{await addDoc(collection(db,'cotacoes'),{itemId:item.id,nome:item.nome,fornecedor:forn,preco,unidade,data,obs,criadoEm:serverTimestamp()});$('cotFornecedor').value=$('cotPreco').value=$('cotObs').value='';$('novaCotForm').classList.add('hide');await rCot();alert('Cotação salva! Ela não altera o estoque nem registra uma compra.')}catch(e){alert('Erro ao salvar cotação: '+e.message)}};
 $('addsel').onclick=async()=>{if(!sel.size)return alert('Toque nos itens que quer adicionar.');const b=writeBatch(db);CAT[gr].filter(c=>sel.has(c.nome)).forEach(c=>b.set(doc(collection(db,'itens')),novo(c)));await b.commit();sel.clear();$('sheet').classList.add('hide');await carregar()};
 $('na').onclick=async()=>{const n=$('nn').value.trim();if(!n||$('nm').value==='')return alert('Digite o nome e o estoque mínimo.');if(mesmo(n))return alert('Esse item já existe.');
  const b=writeBatch(db);b.set(doc(collection(db,'itens')),novo({nome:n,categoria:$('nc').value,unidade:$('nu').value,minimo:+$('nm').value,perecivel:false}));await b.commit();
