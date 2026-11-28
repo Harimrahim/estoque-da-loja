@@ -1,2 +1,4 @@
 # estoque-da-loja
 Site inteiramente criado para controlar e fazer o inventário de consumíveis da açaiteria ou de qualquer outro lugar que tenha a mesma proposta, ele tem uma base de dados que ajuda a determinar o momento que você (comprador e dono da loja) deve fazer a aquisição de novos produtos, embalagem etc. 
+
+Também foi adicionado uma opção dentro do repositório para a confecção de um arquivo pwa de um aplicativo que possa ser instalado e no futuro possa ser transformado em aplicativo com manifeste alguns ícones e sW a criação dessa nova funcionalidade aplicativo PWA, o intuito futuro era realmente começar a criação de um aplicativo onde eu posso ter instalado direto no telefone sem precisar de um indexador como Chrome ou o navegador principal pode ser o Safari ou qualquer outro possibilite a instalação via PWA. 
