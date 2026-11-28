@@ -1,4 +1,4 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Loja • Estoque</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="style.css">
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Loja • Estoque</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#6B2C91"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="style.css">
 <script>(function(){function m(t){var d=document.getElementById("erro");if(!d){d=document.createElement("div");d.id="erro";d.style.cssText="position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#b00020;color:#fff;padding:12px;border-radius:12px;font:14px sans-serif";document.body.appendChild(d)}d.textContent="Erro: "+t}
 addEventListener("error",function(e){m(e.message||("não carregou "+(e.target&&(e.target.src||e.target.href))))},true);addEventListener("unhandledrejection",function(e){m((e.reason&&e.reason.message)||e.reason)})})()</script></head>
 <body>
@@ -38,4 +38,4 @@ $('salvar').onclick=async()=>{
  b.set(doc(db,'fechamentos',h),{data:h,contagens:{...(F.contagens||{}),...c},validades:{...(F.validades||{}),...vs},por:eu.email},{merge:true});
  if(new Date().getDay()==1){const t={};L.forEach(i=>t[i.id]=c[i.id]??i.estoque);b.set(doc(db,'giro',h),{data:h,totais:t,por:eu.email})}
  try{await b.commit();alert('Fechamento salvo ✔');location.reload()}catch(e){alert('Não salvou: '+e.message)}};
-</script></body></html>
+</script><script>if("serviceWorker" in navigator)addEventListener("load",function(){navigator.serviceWorker.register("sw.js")})</script></body></html>

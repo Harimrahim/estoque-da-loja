@@ -1,4 +1,4 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dono • Estoque</title>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dono • Estoque</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#6B2C91"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="style.css"></head>
 <body style="--p:#8a5a00;--p2:#F5A300;--a:#6B2C91;--bg:#FFF3C9">
 <header><img src="logo.png" alt=""><h1>Painel do Dono<br><small id="dt"></small></h1><a href="index.html">Menu</a></header>
@@ -44,4 +44,4 @@ const f=(await getDocs(query(collection(db,'fechamentos'),orderBy('data','desc')
 $('fech').innerHTML=`<div class="card">${f?(f.data==hoje()?'✅ Fechamento de hoje feito':'⚠️ Último fechamento: '+dBR(f.data)):'⚠️ Nenhum fechamento feito ainda'}</div>`;
 const cp=(await getDocs(query(collection(db,'compras'),orderBy('criadoEm','desc'),limit(5)))).docs.map(d=>d.data());
 $('comp').innerHTML=cp.length?cp.map(c=>`<div class="card"><b>${esc(c.nome)}</b> — ${fq(c.qtd)} ${c.unidade}<br><small>${dBR(c.data)} • ${'★'.repeat(c.qualidade)}${'☆'.repeat(5-c.qualidade)} ${c.valor?'• R$ '+c.valor.toFixed(2):''}</small></div>`).join(''):'<div class="card">Nenhuma compra registrada ainda.</div>';
-</script></body></html>
+</script><script>if("serviceWorker" in navigator)addEventListener("load",function(){navigator.serviceWorker.register("sw.js")})</script></body></html>

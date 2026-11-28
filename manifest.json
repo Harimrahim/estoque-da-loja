@@ -1,0 +1,46 @@
+{
+ "name": "Sedex do Açaí • Estoque",
+ "short_name": "Estoque Sedex",
+ "description": "Controle de estoque da Sedex do Açaí",
+ "start_url": "./index.html",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#F7C01B",
+ "theme_color": "#6B2C91",
+ "lang": "pt-BR",
+ "icons": [
+  {
+   "src": "icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "any"
+  },
+  {
+   "src": "icon-maskable-512.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ],
+ "shortcuts": [
+  {
+   "name": "Fechamento (Loja)",
+   "url": "./loja.html"
+  },
+  {
+   "name": "Comprador",
+   "url": "./comprador.html"
+  },
+  {
+   "name": "Dono",
+   "url": "./dono.html"
+  }
+ ]
+}

@@ -52,3 +52,6 @@ small{color:#2b2f4a99}
 .det{margin-top:8px;padding-top:8px;border-top:2px dashed #2b2f4a22}
 .hd{cursor:pointer}
 @media(prefers-reduced-motion:reduce){.painel,.det{animation:none}}
+
+.fab{position:fixed;right:14px;bottom:14px;z-index:6;border:0;border-radius:99px;padding:13px 18px;font:800 1rem Nunito,sans-serif;color:#fff;background:linear-gradient(135deg,var(--p),var(--p2));box-shadow:0 8px 20px #0004}
+details{margin-top:8px}summary{font-weight:800;color:var(--p);cursor:pointer}
